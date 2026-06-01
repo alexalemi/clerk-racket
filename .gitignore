@@ -1,0 +1,12 @@
+compiled/
+**/compiled/
+*.zo
+*.dep
+
+# Static build output (raco clerk build's default target)
+*.html
+
+# Editor / OS junk
+.DS_Store
+*~
+.#*
