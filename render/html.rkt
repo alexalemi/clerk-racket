@@ -9,7 +9,8 @@
          racket/string
          "../cell.rkt"
          "../eval.rkt"
-         "../viewer.rkt")
+         "../viewer.rkt"
+         "../highlight.rkt")
 
 (provide render-cells
          render-cell
@@ -144,9 +145,13 @@
                                    (and n (string->symbol n))))]))
 
 (define (render-source-block c)
+  ;; Tokenize via the Racket lexer and emit class-tagged spans. The
+  ;; lexer's output is already HTML-escaped by highlight-racket, so we
+  ;; concatenate directly into the <pre> without re-escaping.
   (cond
     [(cell-hidden-code? c) ""]
-    [else (format "<pre class=\"clerk-source\">~a</pre>" (escape (source-text c)))]))
+    [else (format "<pre class=\"clerk-source\">~a</pre>"
+                  (highlight-racket (source-text c)))]))
 
 (define (status-label s)
   (case s

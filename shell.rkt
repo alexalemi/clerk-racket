@@ -62,6 +62,17 @@
    "padding:.5em .7em;margin:0;overflow:auto;"
    "font:13px/1.5 'JetBrains Mono','Fira Code','Inconsolata',"
    "'DejaVu Sans Mono',ui-monospace,monospace;border-radius:2px}"
+   ;; Syntax highlighting (Sarabander/Google-Code-Prettify palette).
+   ;; Applied by spans emitted from highlight.rkt; targets pre.clerk-source.
+   "pre.clerk-source .pln{color:#606060}"        ; plain (identifiers)
+   "pre.clerk-source .kwd{color:#4070a0}"        ; keywords (define, if, …)
+   "pre.clerk-source .lit{color:#509040}"        ; literals (numbers, #t/#f)
+   "pre.clerk-source .str{color:#985098}"        ; strings
+   "pre.clerk-source .com{color:#b08050;font-style:italic}"  ; comments
+   "pre.clerk-source .opn,pre.clerk-source .clo{color:#989898}"  ; parens
+   "pre.clerk-source .pun{color:#909020}"        ; operators / non-paren punctuation
+   "pre.clerk-source .atn{color:#606}"           ; #:keyword arg labels
+   "pre.clerk-source .err{color:#c06050}"        ; lex errors
    ;; Status badge
    ".clerk-badge{float:right;font:10px/1 ui-monospace,monospace;"
    "text-transform:uppercase;letter-spacing:.06em;"
