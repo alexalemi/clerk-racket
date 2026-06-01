@@ -32,18 +32,19 @@
     (pretty-print v out)
     (get-output-string out)))
 
-;; For value rendering we use `pretty-print` (uses `print` semantics,
-;; which quotes lists with a leading `'`) — that's the REPL convention
-;; for "this is a value." For *source* rendering we want the unquoted
-;; form (no leading `'`), since the user wrote `(define a 2)`, not
-;; `'(define a 2)`.
-(define (pp-write v)
-  (parameterize ([pretty-print-columns 80])
-    (define out (open-output-string))
-    (pretty-write v out)
-    (get-output-string out)))
-
-(define (source-text c) (pp-write (syntax->datum (cell-source c))))
+;; For *value* rendering we use `pretty-print` — quotes lists with a
+;; leading `'` (the REPL convention for "this is a value").
+;;
+;; For *source* rendering we prefer the literal substring the user
+;; wrote, with their original whitespace and indentation intact. cell.rkt
+;; stashes that on `cell-source-str` at read time. Pretty-write is just
+;; a last-resort fallback if that's somehow missing.
+(define (source-text c)
+  (or (cell-source-str c)
+      (parameterize ([pretty-print-columns 80])
+        (define out (open-output-string))
+        (pretty-write (syntax->datum (cell-source c)) out)
+        (get-output-string out))))
 
 ;; --- Markdown (tiny subset) ----------------------------------------------
 

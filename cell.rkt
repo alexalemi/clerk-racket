@@ -49,7 +49,12 @@
 ;;                 `;; @clerk:NAME ARG` lines immediately preceding the
 ;;                 cell's source line. Only code cells receive directives.
 ;;   prose       — markdown text for md cells; #f for code cells.
-(struct cell (id index kind name source rewrite source-hash directives prose)
+;;   source-str  — the literal source substring this cell was read from,
+;;                 with the user's original whitespace and formatting
+;;                 preserved. Computed from syntax-position/span at
+;;                 read time. #f for md cells (their text is in `prose`).
+(struct cell (id index kind name source rewrite source-hash directives prose
+              source-str)
   #:transparent)
 
 (define (positional-id i) (format "c~a" i))
@@ -137,7 +142,7 @@
   (values 'clerk-notebook
           base-lang
           (for/list ([e (in-list entries)] [i (in-naturals)])
-            (build-cell e i))))
+            (build-cell e i source-text))))
 
 ;; Compute the last line covered by a form using char-position arithmetic
 ;; from read-syntax. Falls back to syntax-line when positions are absent.
@@ -217,13 +222,13 @@
 
 ;; --- Cell construction ----------------------------------------------
 
-(define (build-cell entry i)
+(define (build-cell entry i source-text)
   (case (car entry)
     [(md)
      (define start (cadr entry))
      (define text (caddr entry))
      (cell (positional-id i) i 'md #f #f #f
-           (equal-hash-code text) '() text)]
+           (equal-hash-code text) '() text #f)]
     [(code)
      (define start (cadr entry))
      (define stx (caddr entry))
@@ -231,7 +236,24 @@
      (define datum (syntax->datum stx))
      (define-values (kind name rewrite) (classify stx i))
      (cell (positional-id i) i kind name stx rewrite
-           (equal-hash-code datum) dirs #f)]))
+           (equal-hash-code datum) dirs #f
+           (extract-source-substring stx source-text))]))
+
+;; Pull the exact characters this form spans out of the file. Preserves
+;; the user's original indentation and any inline newlines. Falls back
+;; to a default-formatted datum if position info is missing (which
+;; shouldn't happen — `read-syntax` with `port-count-lines!` always
+;; produces positions).
+(define (extract-source-substring stx source-text)
+  (define pos (syntax-position stx))
+  (define span (syntax-span stx))
+  (cond
+    [(and pos span)
+     (define lo (max 0 (sub1 pos)))
+     (define hi (min (string-length source-text) (+ lo span)))
+     (substring source-text lo hi)]
+    [else
+     (format "~s" (syntax->datum stx))]))
 
 (define (classify stx i)
   (define datum (syntax->datum stx))
