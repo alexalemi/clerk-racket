@@ -155,6 +155,23 @@ This is v0.1. Works for `#lang racket` and `#lang sicp`. Other base
 languages (`typed/racket`, `htdp/bsl`, etc.) should work in principle
 but aren't tested yet. See `examples/` for working notebooks.
 
+## About this code
+
+This was **vibecoded** — written through extended live conversation
+with Claude (Anthropic), with me steering the design and Claude doing
+most of the typing. The shape of the code reflects that: iterative,
+heavily commented at the design-decision level, with explicit notes
+about *why* something is the way it is rather than just *what* it does.
+Treat the comments as a partial design journal as well as
+documentation.
+
+That doesn't make it bad code — but it's worth knowing if you're
+auditing, extending, or copying patterns from it. There are places
+where a careful manual rewrite would tighten things (e.g., the
+markdown subset is hand-rolled and could be replaced with a real
+parser; the dep-tracking machinery from earlier iterations was
+removed but the underlying ideas could come back if needed).
+
 ## License
 
 MIT.
