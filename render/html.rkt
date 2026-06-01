@@ -49,10 +49,35 @@
 ;; --- Markdown (tiny subset) ----------------------------------------------
 
 (define (md-inline s)
+  ;; First stash any code-span contents behind placeholders so the
+  ;; autolink / bold / italic passes leave them alone. Without this,
+  ;; `` `https://example.com` `` would get its URL auto-linked despite
+  ;; being inside backticks. Placeholders use NUL chars (which can't
+  ;; appear in markdown source) to avoid colliding with real text.
+  (define stash (make-hasheqv))
+  (define counter 0)
+  (define (stash-code _ inner)
+    (define id counter)
+    (set! counter (+ counter 1))
+    (hash-set! stash id inner)
+    (format "\0CODE~a\0" id))
   (let* ([s (escape s)]
-         [s (regexp-replace* #px"`([^`]+)`" s "<code>\\1</code>")]
+         [s (regexp-replace* #px"`([^`]+)`" s stash-code)]
+         ;; Explicit links: [text](url) → <a href="url">text</a>
+         [s (regexp-replace* #px"\\[([^]]+)\\]\\(([^)]+)\\)" s
+                             "<a href=\"\\2\">\\1</a>")]
+         ;; Bare URLs (autolinks). The lookbehind `(?<!href=\")` skips
+         ;; URLs we just placed inside an href attribute — otherwise
+         ;; explicit-linked URLs would get a second <a> wrapping.
+         [s (regexp-replace* #px"(?<!href=\")(\\bhttps?://[^[:space:]<>\"()]+)" s
+                             "<a href=\"\\1\">\\1</a>")]
          [s (regexp-replace* #px"\\*\\*([^*]+)\\*\\*" s "<strong>\\1</strong>")]
-         [s (regexp-replace* #px"\\*([^*]+)\\*" s "<em>\\1</em>")])
+         [s (regexp-replace* #px"\\*([^*]+)\\*" s "<em>\\1</em>")]
+         ;; Restore stashed code spans.
+         [s (regexp-replace* #px"\0CODE([0-9]+)\0" s
+                             (lambda (_ id-str)
+                               (format "<code>~a</code>"
+                                       (hash-ref stash (string->number id-str)))))])
     s))
 
 ;; Block-level state during the line walk: we're always in exactly one
