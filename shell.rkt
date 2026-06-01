@@ -76,8 +76,12 @@
    ;; Prose cells: book-like type register
    ".clerk-md{border-left-color:transparent;padding:.2em 0}"
    ".clerk-md .clerk-md-body{"
-   "font-family:'Source Serif 4','Source Serif Pro',"
-   "'Linux Libertine O',Georgia,'Times New Roman',serif;"
+   ;; Linux Libertine O first — the true Sarabander serif, ships with
+   ;; most Linux distros. Source Serif 4 (Google) as web-font fallback,
+   ;; then Georgia for any system that has neither.
+   "font-family:'Linux Libertine O','Libertinus Serif',"
+   "'Source Serif 4','Source Serif Pro',"
+   "Georgia,'Times New Roman',serif;"
    "font-size:1.15em;line-height:1.55;color:#383838;"
    "max-width:64ch}"
    ;; Justified prose with browser hyphenation — book-like density
@@ -89,8 +93,11 @@
    ".clerk-md .clerk-md-body h1,"
    ".clerk-md .clerk-md-body h2,"
    ".clerk-md .clerk-md-body h3{"
-   "font-family:'Source Sans 3','Source Sans Pro',"
-   "'Linux Biolinum O',system-ui,-apple-system,Segoe UI,sans-serif;"
+   ;; Linux Biolinum O first — the real Sarabander sans. Source Sans 3
+   ;; (Google) as web-font fallback for systems without it.
+   "font-family:'Linux Biolinum O','Libertinus Sans',"
+   "'Source Sans 3','Source Sans Pro',"
+   "system-ui,-apple-system,Segoe UI,sans-serif;"
    "font-weight:normal;color:#2a2a2a;line-height:1.2}"
    ".clerk-md .clerk-md-body h1{font-size:1.9em;margin:1.5em 0 .4em}"
    ".clerk-md .clerk-md-body h2{font-size:1.45em;margin:1.4em 0 .3em}"
