@@ -29,6 +29,8 @@
    ".clerk-md .clerk-md-body h2{font-size:1.25em;margin:.4em 0}"
    ".clerk-md .clerk-md-body h3{font-size:1.1em;margin:.4em 0}"
    ".clerk-md code{background:#f1f1f1;padding:0 .25em;border-radius:2px;font:13px ui-monospace,monospace}"
+   ".clerk-md ul,.clerk-md ol{margin:.3em 0 .3em 1.5em;padding:0}"
+   ".clerk-md li{margin:.1em 0}"
    "table.clerk-table{border-collapse:collapse;margin:.3em 0;font:13px ui-monospace,monospace}"
    "table.clerk-table th,table.clerk-table td{border:1px solid #ccc;padding:.15em .45em;text-align:left}"
    "table.clerk-table th{background:#f6f6f6}"

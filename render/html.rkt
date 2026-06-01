@@ -53,37 +53,82 @@
          [s (regexp-replace* #px"\\*([^*]+)\\*" s "<em>\\1</em>")])
     s))
 
+;; Block-level state during the line walk: we're always in exactly one
+;; of {nothing, paragraph, list}. A blank line flushes the current
+;; block; a different block-kind line on a non-blank line also flushes
+;; (so `- a\n1. b` produces two distinct lists).
 (define (md->html text)
-  ;; Strip a leading newline (common when the (clerk-md "\n...") form
-  ;; is written across multiple lines).
   (define lines (string-split text "\n" #:trim? #f))
   (define out (open-output-string))
-  (define (flush-para buf)
-    (unless (null? buf)
+  ;; para-buf : lines of current paragraph (latest first), or '().
+  ;; list-kind: 'ul | 'ol | #f.
+  ;; list-buf : items of current list (latest first), or '().
+  (define (flush-para para-buf)
+    (unless (null? para-buf)
       (display "<p>" out)
-      (display (md-inline (string-join (reverse buf) " ")) out)
+      (display (md-inline (string-join (reverse para-buf) " ")) out)
       (display "</p>" out)))
-  (let loop ([ls lines] [buf '()])
+  (define (flush-list kind items)
+    (when (and kind (pair? items))
+      (define tag (if (eq? kind 'ul) "ul" "ol"))
+      (fprintf out "<~a>" tag)
+      (for ([item (in-list (reverse items))])
+        (fprintf out "<li>~a</li>" (md-inline item)))
+      (fprintf out "</~a>" tag)))
+  (define (flush para list-kind list-items)
+    (flush-para para)
+    (flush-list list-kind list-items))
+  (let loop ([ls lines]
+             [para '()]
+             [list-kind #f]
+             [list-items '()])
     (cond
-      [(null? ls) (flush-para buf)]
+      [(null? ls) (flush para list-kind list-items)]
       [else
        (define l (car ls))
        (cond
+         ;; Blank line: end whatever block we were in.
          [(regexp-match? #px"^[[:space:]]*$" l)
-          (flush-para buf) (loop (cdr ls) '())]
+          (flush para list-kind list-items)
+          (loop (cdr ls) '() #f '())]
+         ;; Headers — single-line blocks; flush whatever was open.
          [(regexp-match #px"^###[[:space:]]+(.*)$" l)
-          => (lambda (m) (flush-para buf)
+          => (lambda (m) (flush para list-kind list-items)
                (fprintf out "<h3>~a</h3>" (md-inline (cadr m)))
-               (loop (cdr ls) '()))]
+               (loop (cdr ls) '() #f '()))]
          [(regexp-match #px"^##[[:space:]]+(.*)$" l)
-          => (lambda (m) (flush-para buf)
+          => (lambda (m) (flush para list-kind list-items)
                (fprintf out "<h2>~a</h2>" (md-inline (cadr m)))
-               (loop (cdr ls) '()))]
+               (loop (cdr ls) '() #f '()))]
          [(regexp-match #px"^#[[:space:]]+(.*)$" l)
-          => (lambda (m) (flush-para buf)
+          => (lambda (m) (flush para list-kind list-items)
                (fprintf out "<h1>~a</h1>" (md-inline (cadr m)))
-               (loop (cdr ls) '()))]
-         [else (loop (cdr ls) (cons l buf))])]))
+               (loop (cdr ls) '() #f '()))]
+         ;; Unordered list item: `- foo`, `* foo`, or `+ foo`.
+         [(regexp-match #px"^[[:space:]]*[-*+][[:space:]]+(.*)$" l)
+          => (lambda (m)
+               (define item (cadr m))
+               (cond
+                 [(eq? list-kind 'ul)
+                  (loop (cdr ls) para 'ul (cons item list-items))]
+                 [else
+                  (flush para list-kind list-items)
+                  (loop (cdr ls) '() 'ul (list item))]))]
+         ;; Ordered list item: `1. foo`, `42. foo`. We ignore the actual
+         ;; number — HTML <ol> renumbers from 1.
+         [(regexp-match #px"^[[:space:]]*[0-9]+\\.[[:space:]]+(.*)$" l)
+          => (lambda (m)
+               (define item (cadr m))
+               (cond
+                 [(eq? list-kind 'ol)
+                  (loop (cdr ls) para 'ol (cons item list-items))]
+                 [else
+                  (flush para list-kind list-items)
+                  (loop (cdr ls) '() 'ol (list item))]))]
+         ;; Plain text — flush any open list, accumulate as a paragraph.
+         [else
+          (flush-list list-kind list-items)
+          (loop (cdr ls) (cons l para) #f '())])]))
   (get-output-string out))
 
 ;; --- Value block ---------------------------------------------------------
