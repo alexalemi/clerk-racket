@@ -154,14 +154,6 @@
     [else (format "<pre class=\"clerk-source\">~a</pre>"
                   (highlight-racket (source-text c)))]))
 
-(define (status-label s)
-  (case s
-    [(fresh) "fresh"]
-    [(dep-dirty) "dep"]
-    [(cached) "cached"]
-    [(error) "error"]
-    [else (format "~a" s)]))
-
 (define (render-cell/status r status)
   (define c (cell-result-cell r))
   (cond
@@ -173,28 +165,23 @@
       (string-append
        "<section id=\"cell-~a\" class=\"clerk-cell clerk-md\" data-cell-id=\"~a\""
        " data-cell-kind=\"md\" data-status=\"~a\">"
-       "<span class=\"clerk-badge\">~a</span>"
        "<div class=\"clerk-md-body\">~a</div>"
        "</section>")
       (cell-id c)
       (cell-id c)
       status
-      (status-label status)
       (md->html (or (cell-md-text c) "")))]
     [else
      (format
       (string-append
        "<section id=\"cell-~a\" class=\"clerk-cell\" data-cell-id=\"~a\""
        " data-cell-kind=\"~a\" data-status=\"~a\">"
-       "<span class=\"clerk-badge\" title=\"~a\">~a</span>"
        "~a~a"
        "</section>")
       (cell-id c)
       (cell-id c)
       (cell-kind c)
       status
-      status
-      (status-label status)
       (render-source-block c)
       (render-value-block r c))]))
 

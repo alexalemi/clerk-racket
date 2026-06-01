@@ -26,6 +26,11 @@
       const nodes = parseFragment(c.html);
       for (const n of nodes) cellsEl.appendChild(n);
     }
+    // Re-render math after every save — KaTeX scans the new prose
+    // for $-delimited expressions. No-op if KaTeX hasn't loaded yet.
+    if (typeof window.clerkRenderMath === "function") {
+      window.clerkRenderMath();
+    }
   }
 
   function applyMessage(msg) {

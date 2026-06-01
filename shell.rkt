@@ -18,6 +18,8 @@
 
 (provide shell-css
          font-link-tags
+         math-tags
+         math-render-script
          live-shell-html
          static-shell-html)
 
@@ -34,6 +36,47 @@
    "family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&"
    "family=Source+Sans+3:wght@400;500&"
    "display=swap\">"))
+
+;; KaTeX for math rendering. CSS is required for proper layout of
+;; rendered math; the JS plus auto-render extension scans the DOM and
+;; replaces `$...$` / `$$...$$` delimiters with rendered math. We pin
+;; a version so the page is reproducible.
+(define math-tags
+  (string-append
+   "<link rel=\"stylesheet\" href=\""
+   "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css\">"
+   "<script defer src=\""
+   "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js\"></script>"
+   "<script defer src=\""
+   "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js\"></script>"))
+
+;; Helper exposed on `window` that scans every prose cell for math
+;; delimiters and renders them via KaTeX. Safe to call before KaTeX
+;; loads (no-ops); the live client calls it on each save, and the
+;; static shell calls it once on DOMContentLoaded.
+(define math-render-script
+  (string-append
+   "<script>"
+   "window.clerkRenderMath=function(root){"
+   "if(typeof renderMathInElement!=='function')return;"
+   "var els=(root||document).querySelectorAll('.clerk-md .clerk-md-body');"
+   "els.forEach(function(el){renderMathInElement(el,{"
+   "delimiters:["
+   "{left:'$$',right:'$$',display:true},"
+   "{left:'$',right:'$',display:false},"
+   "{left:'\\\\[',right:'\\\\]',display:true},"
+   "{left:'\\\\(',right:'\\\\)',display:false}"
+   "],throwOnError:false});});"
+   "};"
+   ;; Render once on initial load (covers the static-build case and the
+   ;; initial paint before the WS hands over).
+   "document.addEventListener('DOMContentLoaded',function(){"
+   "var poll=setInterval(function(){"
+   "if(typeof renderMathInElement==='function'){"
+   "clearInterval(poll);clerkRenderMath();"
+   "}},50);"
+   "});"
+   "</script>"))
 
 (define shell-css
   (string-append
@@ -76,17 +119,10 @@
    "pre.clerk-source .pun{color:#909020}"        ; operators / non-paren punctuation
    "pre.clerk-source .atn{color:#606}"           ; #:keyword arg labels
    "pre.clerk-source .err{color:#c06050}"        ; lex errors
-   ;; Status badge
-   ".clerk-badge{float:right;font:10px/1 ui-monospace,monospace;"
-   "text-transform:uppercase;letter-spacing:.06em;"
-   "padding:2px 6px;border-radius:2px;background:#eee;color:#666}"
-   ".clerk-cell[data-status=fresh] .clerk-badge{background:#d6e6d6;color:#2c4a2c}"
-   ".clerk-cell[data-status=dep-dirty] .clerk-badge{background:#f0e0c0;color:#6a4a1a}"
-   ".clerk-cell[data-status=cached] .clerk-badge{background:#eae5d8;color:#7a6a4a}"
-   ".clerk-cell[data-status=error] .clerk-badge{background:#f0c8c0;color:#6a1f1f}"
-   ".clerk-cell[data-status=fresh]{animation:clerk-flash 1s ease-out}"
-   ".clerk-cell[data-status=dep-dirty]{animation:clerk-flash 1s ease-out}"
-   "@keyframes clerk-flash{from{background:#fbf3d4}to{background:transparent}}"
+   ;; Errored cells get a red left border so failures stand out without
+   ;; needing a badge label. The clerk-error <pre> in the value block
+   ;; carries the actual error text.
+   ".clerk-cell[data-status=error]{border-left-color:#c06050}"
    ;; Prose cells: book-like type register
    ".clerk-md{border-left-color:transparent;padding:.2em 0}"
    ".clerk-md .clerk-md-body{"
@@ -151,7 +187,10 @@
    "<!doctype html><html><head><meta charset=\"utf-8\">"
    "<title>" title "</title>"
    font-link-tags
-   "<style>" shell-css "</style></head><body>"
+   math-tags
+   "<style>" shell-css "</style>"
+   math-render-script
+   "</head><body>"
    "<div id=\"status\">connecting…</div>"
    "<main id=\"cells\"></main>"
    "<script src=\"/client.js\"></script>"
@@ -162,6 +201,9 @@
    "<!doctype html><html><head><meta charset=\"utf-8\">"
    "<title>" title "</title>"
    font-link-tags
-   "<style>" shell-css "</style></head><body>"
+   math-tags
+   "<style>" shell-css "</style>"
+   math-render-script
+   "</head><body>"
    "<main id=\"cells\">" body "</main>"
    "</body></html>"))
