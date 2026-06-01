@@ -49,15 +49,18 @@
    ".clerk-cell[data-cell-kind=expr]{border-left-color:#3a7}"
    ".clerk-cell[data-cell-kind=define]{border-left-color:#37a}"
    ".clerk-cell[data-cell-kind=meta]{border-left-color:#bbb}"
-   ;; Code blocks: compact, parchment-tinted (not stark white-on-gray)
-   "pre.clerk-source{background:#f4efe5;color:#2a2a2a;"
-   "padding:.5em .7em;margin:0 0 .4em;overflow:auto;"
+   ;; Code blocks: no background — Sarabander-style. Visual separation
+   ;; comes from the monospace font and the cell's left border. Only
+   ;; error blocks get tinted, since they need to draw the eye.
+   "pre.clerk-source{background:transparent;color:#383838;"
+   "padding:.2em 0;margin:0 0 .2em;overflow:auto;"
    "font:13px/1.5 'JetBrains Mono','Fira Code','Inconsolata',"
-   "'DejaVu Sans Mono',ui-monospace,monospace;border-radius:2px}"
-   "pre.clerk-value{background:#fdf6e3;color:#2a2a2a;"
-   "padding:.5em .7em;margin:0;overflow:auto;"
+   "'DejaVu Sans Mono',ui-monospace,monospace}"
+   "pre.clerk-value{background:transparent;color:#383838;"
+   "padding:.1em 0 .1em 1em;margin:0;overflow:auto;"
+   "border-left:2px solid #d0c8b8;"  ; subtle bar to mark "this is the result"
    "font:13px/1.5 'JetBrains Mono','Fira Code','Inconsolata',"
-   "'DejaVu Sans Mono',ui-monospace,monospace;border-radius:2px}"
+   "'DejaVu Sans Mono',ui-monospace,monospace}"
    "pre.clerk-error{background:#fbe3e0;color:#6a1f1f;"
    "padding:.5em .7em;margin:0;overflow:auto;"
    "font:13px/1.5 'JetBrains Mono','Fira Code','Inconsolata',"
@@ -116,9 +119,9 @@
    ".clerk-md .clerk-md-body h1:first-child,"
    ".clerk-md .clerk-md-body h2:first-child,"
    ".clerk-md .clerk-md-body h3:first-child{margin-top:.2em}"
+   ;; Inline code in prose: no background; rely on the monospace font.
    ".clerk-md code{"
-   "background:#efe9e0;color:#5a3a2a;"
-   "padding:.05em .3em;border-radius:2px;"
+   "color:#5a3a2a;"
    "font:.9em 'JetBrains Mono','Fira Code','Inconsolata',"
    "'DejaVu Sans Mono',ui-monospace,monospace}"
    ".clerk-md .clerk-md-body ul,"
