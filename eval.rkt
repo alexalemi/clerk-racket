@@ -45,7 +45,11 @@
 ;; A cell-result with cell=#f signals a top-level failure (couldn't
 ;; even reach the per-cell loop). The renderer treats this as a global
 ;; error.
-(struct cell-result (cell value error?) #:transparent)
+;;
+;; stdout/stderr: anything the cell `display`d / `printf`d during its
+;; evaluation. Captured by parameterizing the current ports around the
+;; eval call. Empty strings if the cell printed nothing.
+(struct cell-result (cell value error? stdout stderr) #:transparent)
 
 (define (make-shared-namespace)
   (define ns (make-base-namespace))
@@ -60,7 +64,7 @@
   (parameterize ([current-namespace ns])
     (with-handlers ([exn:fail?
                      (lambda (e)
-                       (list (cell-result #f (exn-message e) #t)))])
+                       (list (cell-result #f (exn-message e) #t "" "")))])
       ;; Declare an empty module in the base lang. We use `0` as the
       ;; body — literals are valid in every Scheme-derived `#lang` we
       ;; care about; `(void)` is not (e.g. `#lang sicp` doesn't bind
@@ -86,23 +90,29 @@
 
 ;; Evaluate one cell's rewritten form at top level. Catches runtime
 ;; errors (and macro-expansion errors at this form) — sets the result's
-;; error? flag so the renderer shows a per-cell error block.
+;; error? flag so the renderer shows a per-cell error block. Also
+;; redirects `current-output-port` / `current-error-port` to string
+;; ports so any prints the cell does are attributed to it instead of
+;; getting dumped into the server's terminal.
 (define (eval-one-cell c)
   (case (cell-kind c)
-    [(md)
-     (cell-result c (void) #f)]
+    [(md) (cell-result c (void) #f "" "")]
     [else
-     (with-handlers ([exn:fail?
-                      (lambda (e)
-                        (cell-result c (exn-message e) #t))])
-       (eval (cell-rewrite c))
-       (cond
-         [(cell-name c)
-          ;; Fetch the binding the rewrite established. Default to void
-          ;; (e.g., if a define-syntax cell binds at phase 1 and there's
-          ;; no value to fetch at phase 0).
-          (define v (namespace-variable-value (cell-name c) #t
-                                              (lambda () (void))))
-          (cell-result c v #f)]
-         [else
-          (cell-result c (void) #f)]))]))
+     (define out (open-output-string))
+     (define err (open-output-string))
+     (define (finish v error?)
+       (cell-result c v error?
+                    (get-output-string out)
+                    (get-output-string err)))
+     (parameterize ([current-output-port out]
+                    [current-error-port err])
+       (with-handlers ([exn:fail?
+                        (lambda (e) (finish (exn-message e) #t))])
+         (eval (cell-rewrite c))
+         (cond
+           [(cell-name c)
+            (define v (namespace-variable-value (cell-name c) #t
+                                                (lambda () (void))))
+            (finish v #f)]
+           [else
+            (finish (void) #f)])))]))

@@ -179,6 +179,20 @@
     [else (format "<pre class=\"clerk-source\">~a</pre>"
                   (highlight-racket (source-text c)))]))
 
+;; Render any captured stdout/stderr the cell produced via `display`,
+;; `printf`, etc. Each non-empty stream gets its own <pre> so styling
+;; can distinguish them (stderr typically gets a warning color).
+(define (render-output-block r)
+  (define o (cell-result-stdout r))
+  (define e (cell-result-stderr r))
+  (string-append
+   (if (and o (not (string=? o "")))
+       (format "<pre class=\"clerk-stdout\">~a</pre>" (escape o))
+       "")
+   (if (and e (not (string=? e "")))
+       (format "<pre class=\"clerk-stderr\">~a</pre>" (escape e))
+       "")))
+
 (define (render-cell/status r status)
   (define c (cell-result-cell r))
   (cond
@@ -201,13 +215,14 @@
       (string-append
        "<section id=\"cell-~a\" class=\"clerk-cell\" data-cell-id=\"~a\""
        " data-cell-kind=\"~a\" data-status=\"~a\">"
-       "~a~a"
+       "~a~a~a"
        "</section>")
       (cell-id c)
       (cell-id c)
       (cell-kind c)
       status
       (render-source-block c)
+      (render-output-block r)
       (render-value-block r c))]))
 
 (define (render-cell r) (render-cell/status r 'fresh))

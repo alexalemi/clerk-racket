@@ -108,6 +108,19 @@
    "padding:.5em .7em;margin:0;overflow:auto;"
    "font:13px/1.5 'JetBrains Mono','Fira Code','Inconsolata',"
    "'DejaVu Sans Mono',ui-monospace,monospace;border-radius:2px}"
+   ;; Captured stdout/stderr from the cell's eval. stdout is neutral
+   ;; (subtle gray bar to mark "this was printed during execution");
+   ;; stderr borrows the warning-tan from the operator palette.
+   "pre.clerk-stdout{background:transparent;color:#5a5a5a;"
+   "padding:.1em 0 .1em 1em;margin:0;overflow:auto;"
+   "border-left:2px dashed #c8c0b0;"
+   "font:13px/1.5 'JetBrains Mono','Fira Code','Inconsolata',"
+   "'DejaVu Sans Mono',ui-monospace,monospace}"
+   "pre.clerk-stderr{background:transparent;color:#7a4a1a;"
+   "padding:.1em 0 .1em 1em;margin:0;overflow:auto;"
+   "border-left:2px dashed #c8a050;"
+   "font:13px/1.5 'JetBrains Mono','Fira Code','Inconsolata',"
+   "'DejaVu Sans Mono',ui-monospace,monospace}"
    ;; Syntax highlighting (Sarabander/Google-Code-Prettify palette).
    ;; Applied by spans emitted from highlight.rkt; targets pre.clerk-source.
    "pre.clerk-source .pln{color:#606060}"        ; plain (identifiers)
