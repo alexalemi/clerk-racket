@@ -28,7 +28,9 @@
     '("Usage: raco clerk <subcommand> ..."
       ""
       "Subcommands:"
-      "  serve <file> [--port N]    Run a live notebook server (default port 7777)"
+      "  serve <path> [--port N]    Run a live notebook server (default port 7777)"
+      "                             <path> can be a .rkt file, or a directory —"
+      "                             saving any .rkt inside the tree switches the view."
       "  build <file> [-o OUT]      Write a self-contained HTML snapshot")
     "\n"))
   (newline)

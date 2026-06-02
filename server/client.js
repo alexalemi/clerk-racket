@@ -21,6 +21,10 @@
   // with status="cached" and don't flash). The server still does the
   // dep-aware work; we just don't bother with diffing on the wire.
   function applyInit(msg) {
+    // Server tells us which file is currently active — update the tab
+    // title so directory-mode users see the file name change as they
+    // switch between notebooks.
+    if (msg.title) document.title = msg.title + " — clerk";
     cellsEl.replaceChildren();
     for (const c of msg.cells) {
       const nodes = parseFragment(c.html);

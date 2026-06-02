@@ -20,7 +20,12 @@
 ;; slower-but-reliable path (one stat per quarter-second) everywhere
 ;; else, without making the user configure anything.
 
-(provide watch-file)
+(require racket/file
+         racket/list)
+
+(provide watch-file
+         watch-tree
+         find-notebooks)
 
 (define MAX-INOTIFY-FAILS 3)
 (define POLL-MS 250)
@@ -120,3 +125,76 @@
     (set-box! stop? #t)
     (thread-send t 'stop #f)
     (kill-thread t)))
+
+;; --- Directory watching --------------------------------------------------
+;;
+;; For directory mode we poll mtimes of every `.rkt` file under the root.
+;; Simpler than dynamically managing inotify watches across subdirectories
+;; and works regardless of filesystem. `on-change` is called with the
+;; *path that changed* — the caller uses that to swap which notebook is
+;; currently active.
+
+(define (rkt-file? p)
+  (and (file-exists? p)
+       (regexp-match? #rx"\\.rkt$" (path->string p))))
+
+(define (find-notebooks root)
+  ;; Recursively find every `.rkt` file under `root`. Skips `compiled/`
+  ;; directories (Racket's bytecode cache).
+  (find-files
+   (lambda (p)
+     (and (rkt-file? p)
+          (not (regexp-match? #rx"/compiled/" (path->string p)))))
+   root))
+
+(define (snapshot-tree root)
+  (for/hash ([p (in-list (find-notebooks root))])
+    (values (path->string p) (mtime+size p))))
+
+(define (watch-dir root on-change
+                   #:poll-ms [poll-ms POLL-MS])
+  (define stop? (box #f))
+  (define t
+    (thread
+     (lambda ()
+       (define last (snapshot-tree root))
+       (let loop ()
+         (unless (unbox stop?)
+           (sleep (/ poll-ms 1000.0))
+           (with-handlers ([exn:fail? (lambda (_) (loop))])
+             (define now (snapshot-tree root))
+             ;; Files whose stamp differs from last cycle (or are new).
+             (define changed
+               (for/list ([(p stamp) (in-hash now)]
+                          #:when (not (equal? stamp (hash-ref last p #f))))
+                 p))
+             (set! last now)
+             (when (pair? changed)
+               ;; Pick the most-recently-modified among simultaneous
+               ;; changes to avoid visual thrashing.
+               (define chosen
+                 (argmax (lambda (p) (car (hash-ref now p))) changed))
+               (with-handlers ([exn:fail?
+                                (lambda (e)
+                                  (log-error "clerk watch-dir on-change: ~a"
+                                             (exn-message e)))])
+                 (wait-for-existence chosen)
+                 (on-change chosen)))
+             (loop)))))))
+  (lambda ()
+    (set-box! stop? #t)
+    (thread-send t 'stop #f)
+    (kill-thread t)))
+
+;; Public API: pass a path (file or directory). The on-change callback
+;; receives the path that fired the event — for file-mode that's the
+;; constant input path; for dir-mode it's whichever `.rkt` was edited.
+(define (watch-tree path on-change
+                    #:poll-ms [poll-ms POLL-MS])
+  (cond
+    [(file-exists? path)
+     (watch-file path (lambda () (on-change path)))]
+    [(directory-exists? path)
+     (watch-dir path on-change #:poll-ms poll-ms)]
+    [else
+     (error 'watch-tree "no such file or directory: ~a" path)]))

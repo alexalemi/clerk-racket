@@ -42,8 +42,12 @@ clerk-racket` without re-installing.
 ## Use
 
 ```sh
-# Live server (default port 7777)
+# Live server on a single file (default port 7777)
 raco clerk serve mynote.rkt
+
+# Directory mode: watch every .rkt in a tree. Saving any of them
+# switches the live view to that file.
+raco clerk serve ./notebooks
 
 # Static HTML snapshot — no server, embeddable
 raco clerk build mynote.rkt -o out.html
