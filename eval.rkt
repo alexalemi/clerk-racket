@@ -94,6 +94,11 @@
 ;; redirects `current-output-port` / `current-error-port` to string
 ;; ports so any prints the cell does are attributed to it instead of
 ;; getting dumped into the server's terminal.
+;;
+;; The value is `snapshot`d before being stashed: cells run before
+;; rendering, so a later cell that mutates an mpair from an earlier
+;; cell would otherwise corrupt the earlier cell's rendered value
+;; (SICP ch3-style destructive code triggers this constantly).
 (define (eval-one-cell c)
   (case (cell-kind c)
     [(md) (cell-result c (void) #f "" "")]
@@ -101,7 +106,7 @@
      (define out (open-output-string))
      (define err (open-output-string))
      (define (finish v error?)
-       (cell-result c v error?
+       (cell-result c (if error? v (snapshot v)) error?
                     (get-output-string out)
                     (get-output-string err)))
      (parameterize ([current-output-port out]
@@ -116,3 +121,27 @@
             (finish v #f)]
            [else
             (finish (void) #f)])))]))
+
+;; Freeze a value against later mutation by deep-copying any mutable
+;; pair structure it points into. Non-mpair values are returned as-is
+;; (immutable pairs, numbers, strings, picts, hashes, … — we trust that
+;; the user isn't going to in-place-mutate those mid-notebook, and
+;; copying them would just slow things down).
+;;
+;; Must be cycle-safe: SICP queue implementations share structure
+;; between front- and rear-pointers, and exercise 3.13 builds an
+;; outright cyclic mlist on purpose.
+(define (snapshot v)
+  (define seen (make-hasheq))
+  (let loop ([v v])
+    (cond
+      [(mpair? v)
+       (or (hash-ref seen v #f)
+           (let ([m (mcons #f #f)])
+             (hash-set! seen v m)
+             (set-mcar! m (loop (mcar v)))
+             (set-mcdr! m (loop (mcdr v)))
+             m))]
+      [(pair? v)
+       (cons (loop (car v)) (loop (cdr v)))]
+      [else v])))
