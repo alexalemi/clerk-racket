@@ -113,7 +113,7 @@
                     [current-error-port err])
        (with-handlers ([exn:fail?
                         (lambda (e) (finish (exn-message e) #t))])
-         (eval (cell-rewrite c))
+         (eval (wrap-for-shadowing c))
          (cond
            [(cell-name c)
             (define v (namespace-variable-value (cell-name c) #t
@@ -121,6 +121,45 @@
             (finish v #f)]
            [else
             (finish (void) #f)])))]))
+
+;; Shadowing fix: in a `module->namespace` whose base lang imported a
+;; name, top-level `(define name ...)` does create a new top-level
+;; binding, but the RHS is compiled against the module's scope where
+;; `name` still resolves to the import. So `(define (f s) ... (f ...))`
+;; for an imported `f` has its recursive call captured by the import,
+;; not by the binding being defined. Pre-declaring the name with a
+;; `(define name (void))` immediately before the real define makes the
+;; top-level binding exist at the real define's compile time, so the
+;; body resolves to it. Most cells don't define an already-imported
+;; name and this wrap is a harmless no-op.
+(define (wrap-for-shadowing c)
+  (define names (cell-defined-names c))
+  (cond
+    [(null? names) (cell-rewrite c)]
+    [else
+     (datum->syntax #f
+                    (cons 'begin
+                          (append
+                           (for/list ([n (in-list names)])
+                             `(define ,n (void)))
+                           (list (cell-rewrite c)))))]))
+
+;; Names a cell introduces at top level via `define` / `define-values`.
+;; Returns '() for kinds that don't bind (expr, syntax, meta, md).
+(define (cell-defined-names c)
+  (case (cell-kind c)
+    [(define)
+     (define datum (syntax->datum (cell-source c)))
+     (define target (cadr datum))
+     (cond
+       [(symbol? target) (list target)]
+       [(pair? target)   (list (car target))]
+       [else             '()])]
+    [(define-values)
+     (define datum (syntax->datum (cell-source c)))
+     (define names (cadr datum))
+     (if (list? names) (filter symbol? names) '())]
+    [else '()]))
 
 ;; Freeze a value against later mutation by deep-copying any mutable
 ;; pair structure it points into. Non-mpair values are returned as-is
